@@ -1,7 +1,10 @@
 package com.example.gpsdemo
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -10,9 +13,8 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.example.gpsdemo.databinding.ActivityMainBinding
 import com.google.android.gms.common.server.response.FastJsonResponse
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
+import java.lang.Exception
 
 const val DEFAULT_UPDATE_INTERVAL: Long = 30
 const val FASTEST_UPDATE_INTERVAL: Long = 5
@@ -28,6 +30,9 @@ class MainActivity : AppCompatActivity() {
     // Client for location service
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
+    // For location updates
+    private lateinit var locationCallback: LocationCallback
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -39,6 +44,15 @@ class MainActivity : AppCompatActivity() {
             .setFastestInterval(1000 * FASTEST_UPDATE_INTERVAL)
             .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
 
+        // Triggered when update interval is met
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult ?: return
+                updateUiValues(locationResult.lastLocation)
+            }
+        }
+
+
         binding.swGps.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 // More accuracy GPS
@@ -48,6 +62,16 @@ class MainActivity : AppCompatActivity() {
                 // Normal balanced mode
                 locationRequest.priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
                 binding.tvSensor.text = "Using towers + WIFI"
+            }
+        }
+
+        binding.swLocationsupdates.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                // Turn on location tracking
+                startLocationUpdates()
+            } else {
+                // Turn off location tracking
+                stopLocationUpdates()
             }
         }
 
@@ -76,6 +100,7 @@ class MainActivity : AppCompatActivity() {
                     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                     PERMISSIONS_FINE_LOCATION
                 )
+                finish()
             }
         }
 
@@ -97,6 +122,38 @@ class MainActivity : AppCompatActivity() {
                 location.speed.toString()
             else
                 "Not available"
+
+        var geocoder : Geocoder = Geocoder(this)
+        try {
+            var addresses : List<Address>  = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+            binding.tvAddress.text = addresses[0].getAddressLine(0)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun clearUiValues() {
+        binding.tvLat.text = "Not tracking location"
+        binding.tvLon.text = "Not tracking location"
+        binding.tvAccuracy.text = "Not tracking location"
+
+        binding.tvAltitude.text = "Not tracking location"
+        binding.tvSpeed.text = "Not tracking location"
+
+        binding.tvAddress.text = "Not tracking location"
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        binding.tvUpdates.text = "Location is being tracked"
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null)
+    }
+
+    private fun stopLocationUpdates() {
+        binding.tvUpdates.text = "Location is not being tracked"
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        clearUiValues()
     }
 
     override fun onRequestPermissionsResult(
