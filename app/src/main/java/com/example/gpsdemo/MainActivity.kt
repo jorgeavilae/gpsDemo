@@ -72,6 +72,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        binding.btnShowMap.setOnClickListener {
+            val intent = Intent(this, MapsActivity::class.java)
+            startActivity(intent)
+
+        }
+
         binding.swGps.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 // More accuracy GPS
@@ -143,15 +149,17 @@ class MainActivity : AppCompatActivity() {
             else
                 "Not available"
 
-        var geocoder: Geocoder = Geocoder(this)
+        val geocoder: Geocoder = Geocoder(this)
         try {
-            var addresses: List<Address> =
+            val addresses: List<Address> =
                 geocoder.getFromLocation(location.latitude, location.longitude, 1)
             binding.tvAddress.text = addresses[0].getAddressLine(0)
 
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        binding.tvCountOfCrumbs.text = (this.application as MyApplication).myLocations.size.toString()
     }
 
     private fun clearUiValues() {
