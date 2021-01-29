@@ -2,6 +2,7 @@ package com.example.gpsdemo
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
@@ -23,6 +24,12 @@ const val PERMISSIONS_FINE_LOCATION: Int = 99
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
+    // Current location
+    private lateinit var currentLocation: Location
+
+    // List of saved locations
+    private lateinit var savedLocations: MutableList<Location>
 
     // Configuration for client's location service
     private lateinit var locationRequest: LocationRequest
@@ -52,6 +59,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnNewWaypoint.setOnClickListener {
+            // save gps current location (in an Application's public var for the moment)
+            savedLocations = (this.application as MyApplication).myLocations.toMutableList()
+            savedLocations.add(currentLocation)
+            (this.application as MyApplication).myLocations = savedLocations
+            binding.tvCountOfCrumbs.text = savedLocations.size.toString()
+        }
+
+        binding.btnShowWaypointList.setOnClickListener {
+            val intent = Intent(this, ListActivity::class.java)
+            startActivity(intent)
+        }
 
         binding.swGps.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
@@ -91,6 +110,7 @@ class MainActivity : AppCompatActivity() {
             fusedLocationProviderClient.lastLocation.addOnSuccessListener {
                 // Update UI
                 updateUiValues(it)
+                currentLocation = it
             }
 
         } else {
@@ -123,9 +143,10 @@ class MainActivity : AppCompatActivity() {
             else
                 "Not available"
 
-        var geocoder : Geocoder = Geocoder(this)
+        var geocoder: Geocoder = Geocoder(this)
         try {
-            var addresses : List<Address>  = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+            var addresses: List<Address> =
+                geocoder.getFromLocation(location.latitude, location.longitude, 1)
             binding.tvAddress.text = addresses[0].getAddressLine(0)
 
         } catch (e: Exception) {
